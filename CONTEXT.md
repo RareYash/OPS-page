@@ -1,12 +1,12 @@
-# Newtonite Ops — Comprehensive Context & System State
+# Corporate Ops — Comprehensive Context & System State
 
-> **Handover Context Document**: This document provides an exhaustive, self-contained overview of the problem statement, architecture, directory tree, implemented mechanisms, test suite, and operational commands for **Newtonite Ops ("Operations Under Pressure")**. Any AI model or engineer reading this can understand the full context of the project.
+> **Handover Context Document**: This document provides an exhaustive, self-contained overview of the problem statement, architecture, directory tree, implemented mechanisms, test suite, and operational commands for **Corporate Ops ("Operations Under Pressure")**. Any AI model or engineer reading this can understand the full context of the project.
 
 ---
 
 ## 1. Project Overview & Core Mission
 
-- **Project Name:** Newtonite Ops ("Operations Under Pressure")
+- **Project Name:** Corporate Ops ("Operations Under Pressure")
 - **Primary Objective:** High-reliability, multi-team work item tracking system engineered specifically for operations under severe pressure, high concurrency, and adversarial conditions.
 - **Core Evaluation Dimensions:**
   1. **Concurrency by Design:** Handling simultaneous claims (only 1 winner), stale edits (optimistic locking with `If-Match`), and network retries (idempotency with SHA-256 request hashing).

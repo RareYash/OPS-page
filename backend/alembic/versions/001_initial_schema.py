@@ -9,7 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID, JSONB, TSVECTOR
+from sqlalchemy.dialects.postgresql import UUID, JSONB, TSVECTOR, ENUM
 
 revision: str = "001"
 down_revision: Union[str, None] = None
@@ -18,22 +18,38 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # --- Enums ---
-    op.execute("CREATE TYPE role_enum AS ENUM ('viewer', 'member', 'lead', 'admin')")
-    op.execute(
-        "CREATE TYPE item_status_enum AS ENUM ('open', 'in_progress', 'pending_approval', 'resolved', 'closed')"
-    )
-    op.execute("CREATE TYPE item_priority_enum AS ENUM ('low', 'medium', 'high', 'critical')")
-    op.execute("CREATE TYPE outbox_status_enum AS ENUM ('pending', 'processing', 'done', 'failed')")
+    # --- Enums (create safely if not already present) ---
+    op.execute("""
+        DO $$ BEGIN
+            CREATE TYPE role_enum AS ENUM ('viewer', 'member', 'lead', 'admin');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+        DO $$ BEGIN
+            CREATE TYPE item_status_enum AS ENUM ('open', 'in_progress', 'pending_approval', 'resolved', 'closed');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+        DO $$ BEGIN
+            CREATE TYPE item_priority_enum AS ENUM ('low', 'medium', 'high', 'critical');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+        DO $$ BEGIN
+            CREATE TYPE outbox_status_enum AS ENUM ('pending', 'processing', 'done', 'failed');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+    """)
 
-    role_enum = sa.Enum("viewer", "member", "lead", "admin", name="role_enum", create_type=False)
-    item_status_enum = sa.Enum(
+    role_enum = ENUM("viewer", "member", "lead", "admin", name="role_enum", create_type=False)
+    item_status_enum = ENUM(
         "open", "in_progress", "pending_approval", "resolved", "closed",
         name="item_status_enum",
         create_type=False,
     )
-    item_priority_enum = sa.Enum("low", "medium", "high", "critical", name="item_priority_enum", create_type=False)
-    outbox_status_enum = sa.Enum("pending", "processing", "done", "failed", name="outbox_status_enum", create_type=False)
+    item_priority_enum = ENUM("low", "medium", "high", "critical", name="item_priority_enum", create_type=False)
+    outbox_status_enum = ENUM("pending", "processing", "done", "failed", name="outbox_status_enum", create_type=False)
 
     # --- Users ---
     op.create_table(

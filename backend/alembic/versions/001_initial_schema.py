@@ -19,20 +19,21 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # --- Enums ---
-    role_enum = sa.Enum("viewer", "member", "lead", "admin", name="role_enum")
-    role_enum.create(op.get_bind(), checkfirst=True)
+    op.execute("CREATE TYPE role_enum AS ENUM ('viewer', 'member', 'lead', 'admin')")
+    op.execute(
+        "CREATE TYPE item_status_enum AS ENUM ('open', 'in_progress', 'pending_approval', 'resolved', 'closed')"
+    )
+    op.execute("CREATE TYPE item_priority_enum AS ENUM ('low', 'medium', 'high', 'critical')")
+    op.execute("CREATE TYPE outbox_status_enum AS ENUM ('pending', 'processing', 'done', 'failed')")
 
+    role_enum = sa.Enum("viewer", "member", "lead", "admin", name="role_enum", create_type=False)
     item_status_enum = sa.Enum(
         "open", "in_progress", "pending_approval", "resolved", "closed",
         name="item_status_enum",
+        create_type=False,
     )
-    item_status_enum.create(op.get_bind(), checkfirst=True)
-
-    item_priority_enum = sa.Enum("low", "medium", "high", "critical", name="item_priority_enum")
-    item_priority_enum.create(op.get_bind(), checkfirst=True)
-
-    outbox_status_enum = sa.Enum("pending", "processing", "done", "failed", name="outbox_status_enum")
-    outbox_status_enum.create(op.get_bind(), checkfirst=True)
+    item_priority_enum = sa.Enum("low", "medium", "high", "critical", name="item_priority_enum", create_type=False)
+    outbox_status_enum = sa.Enum("pending", "processing", "done", "failed", name="outbox_status_enum", create_type=False)
 
     # --- Users ---
     op.create_table(
@@ -224,7 +225,7 @@ def downgrade() -> None:
     op.drop_table("teams")
     op.drop_table("users")
 
-    sa.Enum(name="outbox_status_enum").drop(op.get_bind(), checkfirst=True)
-    sa.Enum(name="item_priority_enum").drop(op.get_bind(), checkfirst=True)
-    sa.Enum(name="item_status_enum").drop(op.get_bind(), checkfirst=True)
-    sa.Enum(name="role_enum").drop(op.get_bind(), checkfirst=True)
+    op.execute("DROP TYPE IF EXISTS outbox_status_enum CASCADE")
+    op.execute("DROP TYPE IF EXISTS item_priority_enum CASCADE")
+    op.execute("DROP TYPE IF EXISTS item_status_enum CASCADE")
+    op.execute("DROP TYPE IF EXISTS role_enum CASCADE")

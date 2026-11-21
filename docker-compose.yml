@@ -1,0 +1,65 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-newtonite}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-newtonite_dev_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-newtonite}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # DB port NOT exposed publicly (security). Access via docker exec if needed.
+    # Uncomment the next two lines for local development outside Docker:
+    # ports:
+    #   - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U newtonite"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://newtonite:newtonite_dev_pass@db:5432/newtonite
+      SECRET_KEY: ${SECRET_KEY:-CHANGE-ME-IN-PRODUCTION}
+      APP_ENV: ${APP_ENV:-development}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "
+        alembic upgrade head &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+
+  worker:
+    build:
+      context: ./backend
+    environment:
+      DATABASE_URL: postgresql://newtonite:newtonite_dev_pass@db:5432/newtonite
+      SECRET_KEY: ${SECRET_KEY:-CHANGE-ME-IN-PRODUCTION}
+      APP_ENV: ${APP_ENV:-development}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: python -m app.worker.outbox_worker
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+    environment:
+      VITE_API_URL: http://localhost:8000
+
+volumes:
+  pgdata:

@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: newtonite
+          POSTGRES_PASSWORD: newtonite_test_pass
+          POSTGRES_DB: newtonite_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://newtonite:newtonite_test_pass@localhost:5432/newtonite_test
+      SECRET_KEY: test-secret-key-ci-only
+      APP_ENV: development
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Lint (ruff)
+        run: |
+          cd backend
+          ruff check .
+
+      - name: Type check (mypy)
+        run: |
+          cd backend
+          mypy app --ignore-missing-imports
+
+      - name: Security scan (bandit)
+        run: |
+          cd backend
+          bandit -r app -ll --skip B101
+
+      - name: Dependency audit (pip-audit)
+        run: |
+          cd backend
+          pip-audit || true  # Don't fail CI on advisory-only findings
+
+      - name: Run migrations
+        run: |
+          cd backend
+          alembic upgrade head
+
+      - name: Run tests
+        run: |
+          cd backend
+          pytest tests/ -v --tb=short
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Lint
+        run: |
+          cd frontend
+          npm run lint || true
+
+      - name: Type check
+        run: |
+          cd frontend
+          npm run type-check || true
+
+      - name: Build
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Audit
+        run: |
+          cd frontend
+          npm audit --audit-level=high || true

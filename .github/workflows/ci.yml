@@ -67,18 +67,7 @@ jobs:
       - name: Run migrations
         run: |
           cd backend
-          python -c "
-          import os, sys, traceback
-          try:
-              import psycopg2
-              conn = psycopg2.connect(os.environ.get('DATABASE_URL'))
-              print('::notice::Postgres connection SUCCESS! DSN: ' + str(conn.dsn))
-              conn.close()
-          except Exception as e:
-              print('::error::Postgres connection FAILED: ' + str(e))
-          "
-          alembic upgrade head 2>&1 | while IFS= read -r line; do echo "::error::$line"; done
-          alembic upgrade head
+          python scripts/run_migrations.py
 
       - name: Run tests
         run: |

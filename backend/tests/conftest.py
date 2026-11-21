@@ -33,7 +33,7 @@ settings = get_settings()
 # Use isolated test database URL so running pytest never touches or wipes dev.db
 TEST_DB_URL = os.getenv(
     "TEST_DATABASE_URL",
-    "sqlite:///d:/project/backend/test.db",
+    os.getenv("DATABASE_URL", "sqlite:///d:/project/backend/test.db"),
 )
 
 if TEST_DB_URL.startswith("sqlite"):

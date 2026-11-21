@@ -67,7 +67,22 @@ jobs:
       - name: Run migrations
         run: |
           cd backend
-          alembic upgrade head
+          python -c "
+          import os, sys, traceback
+          try:
+              import psycopg2
+              print('Attempting connection to:', os.environ.get('DATABASE_URL'))
+              conn = psycopg2.connect(os.environ.get('DATABASE_URL'))
+              print('Postgres connection SUCCESS! DSN:', conn.dsn)
+              conn.close()
+          except Exception as e:
+              print('Postgres connection FAILED:', e)
+              traceback.print_exc()
+          " >> $GITHUB_STEP_SUMMARY 2>&1
+          alembic upgrade head >> $GITHUB_STEP_SUMMARY 2>&1 || {
+            cat $GITHUB_STEP_SUMMARY
+            exit 1
+          }
 
       - name: Run tests
         run: |

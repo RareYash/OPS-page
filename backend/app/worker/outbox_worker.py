@@ -62,15 +62,23 @@ def process_batch() -> int:
         # Pick up pending messages with SKIP LOCKED (on PG)
         now = datetime.now(timezone.utc)
         is_sqlite = db.bind is not None and db.bind.dialect.name == "sqlite"
-        lock_clause = "" if is_sqlite else "FOR UPDATE SKIP LOCKED "
-        result = db.execute(
-            text(
+        if is_sqlite:
+            query = text(
                 "SELECT id FROM outbox "
                 "WHERE status = 'pending' AND next_attempt_at <= :now "
                 "ORDER BY id "
-                f"{lock_clause}"
                 "LIMIT :limit"
-            ),
+            )
+        else:
+            query = text(
+                "SELECT id FROM outbox "
+                "WHERE status = 'pending' AND next_attempt_at <= :now "
+                "ORDER BY id "
+                "FOR UPDATE SKIP LOCKED "
+                "LIMIT :limit"
+            )
+        result = db.execute(
+            query,
             {"now": now, "limit": settings.worker_batch_size},
         )
         row_ids = [row[0] for row in result]
